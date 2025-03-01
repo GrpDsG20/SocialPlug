@@ -10,10 +10,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from colorama import Fore, init
 import git
-import sys
-import shutil
 import tempfile
-import threading
 
 init(autoreset=True)
 
@@ -21,7 +18,6 @@ REPO_URL = 'https://github.com/GrpDsG20/SocialPlug'
 
 def actualizar_repositorio():
     repo_path = tempfile.mkdtemp()
-
     try:
         if not os.path.exists(repo_path):
             repo = git.Repo.clone_from(REPO_URL, repo_path)
@@ -31,8 +27,8 @@ def actualizar_repositorio():
             origin.fetch()
             if repo.is_dirty():
                 origin.pull()
-    except Exception as e:
-        print(Fore.RED + f"Error al intentar actualizar el repositorio: {e}")
+    except Exception:
+        pass  # Silenced error handling
 
 def ingresar_datos():
     username = input("Ingresa tu nombre de usuario: ")
@@ -69,31 +65,32 @@ def procesando_animation():
 def abrir_plataforma(plataforma, username, email):
     if plataforma == '1':
         url = "https://www.socialplug.io/es/servicios-gratuitos/seguidores-instagram-gratis"
-        username_selector = 'socialHandle'
-        email_selector = 'email'
     elif plataforma == '2':
         url = "https://www.socialplug.io/es/servicios-gratuitos/seguidores-tiktok-gratis"
-        username_selector = 'socialHandle'
-        email_selector = 'email'
     elif plataforma == '3':
         url = "https://www.socialplug.io/es/servicios-gratuitos/free-twitch-followers"
-        username_selector = 'socialHandle'
-        email_selector = 'email'
     elif plataforma == '4':
         url = "https://www.socialplug.io/es/servicios-gratuitos/suscriptores-youtube-gratis"
-        username_selector = 'socialHandle'
-        email_selector = 'email'
     elif plataforma == '5':
         url = "https://www.socialplug.io/es/servicios-gratuitos/seguidores-twitter-gratis"
-        username_selector = 'socialHandle'
-        email_selector = 'email'
     else:
         print(Fore.RED + "Selección no válida.")
         return
 
+    # Configure Chrome options
     chrome_options = Options()
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--headless")  # Run in headless mode (without GUI)
+    chrome_options.add_argument("--disable-logging")  # Disable Chrome logs
+    chrome_options.add_argument("--log-level=3")  # Set the log level to only errors (no warnings or info)
+    
+    # Set up Chrome logging preferences to suppress warnings
+    prefs = {
+        'profile.managed_default_content_settings.images': 2,  # Disable images
+        'profile.managed_default_content_settings.javascript': 2  # Disable JavaScript
+    }
+    chrome_options.add_experimental_option('prefs', prefs)
 
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
@@ -104,9 +101,9 @@ def abrir_plataforma(plataforma, username, email):
 
     try:
         username_input = WebDriverWait(driver, 20).until(
-            EC.visibility_of_element_located((By.NAME, username_selector))
+            EC.visibility_of_element_located((By.NAME, 'socialHandle'))
         )
-        email_input = driver.find_element(By.NAME, email_selector)
+        email_input = driver.find_element(By.NAME, 'email')
 
         username_input.send_keys(username)
         email_input.send_keys(email)
@@ -116,32 +113,12 @@ def abrir_plataforma(plataforma, username, email):
 
         time.sleep(5)
 
-        try:
-            error_message = WebDriverWait(driver, 5).until(
-                EC.visibility_of_element_located((By.CLASS_NAME, 'form-message'))
-            )
+        # Only processing, suppress error messages
+        print(Fore.YELLOW + "Procesando...")
 
-            if "El servicio gratuito ya ha sido solicitado" in error_message.text:
-                print(Fore.RED + "¡Error! El servicio ha sido utilizado recientemente. Recuerda que puedes intentar nuevamente después de 24 horas.")
-                return
-            else:
-                print(Fore.GREEN + "Los seguidores están en camino. Revisa tu correo en la sección de promociones, notificaciones o spam. Confirma el correo y disfruta de los seguidores.")
-                respuesta = input("¿Quieres volver a usar el servicio después de 24h? (s/n): ")
-                if respuesta.lower() == 's':
-                    print(Fore.YELLOW + "Servicio listo para ser utilizado nuevamente en 24 horas.")
-                else:
-                    print(Fore.YELLOW + "Gracias por utilizar el servicio.")
-                return
+    except Exception:
+        pass  # Silent exception handling
 
-        except Exception as e:
-            print(Fore.RED + "¡Error! El servicio ha sido utilizado recientemente. Recuerda que puedes intentar nuevamente después de 24 horas.")
-            return
-
-    except Exception as e:
-        print(Fore.RED + f"Se produjo un error en la verificación del formulario: {e}")
-
-    print(Fore.YELLOW + "El navegador se ha dejado abierto para que puedas ver el proceso.")
-    
     driver.quit()
 
 def main():
@@ -158,3 +135,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+1
